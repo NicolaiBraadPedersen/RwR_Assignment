@@ -7,7 +7,7 @@ framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD",
 
 ## Delete the variables that are obsolete
 framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "PERIOD", "TIMEAP"))
-framingham
+summary(framingham)
 
 #split cigpday into levels 0-3
 
@@ -21,7 +21,7 @@ framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
 framingham$PREVCVD = ifelse(framingham$PREVCHD==1 | framingham$PREVMI==1 | framingham$PREVSTRK==1,1,0)
 
 ## Delete the variables used to make new columns ##
-framingham <- framingham %>% select(-c("PREVSTRK","PREVCHD","PREVMI","CURSMOKE"))
+framingham <- framingham %>% select(-c("PREVSTRK","PREVCHD","PREVMI","CURSMOKE","HDLC","LDLC"))
 
 
 
