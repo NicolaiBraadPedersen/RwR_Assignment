@@ -5,7 +5,7 @@ framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD",
                       "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
                       "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")], as.factor)
 
-framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD"))
+framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "PERIOD"))
 framingham
 
 
