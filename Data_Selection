@@ -15,6 +15,7 @@ cigpday_f[cigpday_f >= 1 & cigpday_f <= 10] <- 1
 cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
 cigpday_f[cigpday_f >= 21 ] <- 3
 framingham$CIGPDAY <- cigpday_f
+framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
 
 
 
