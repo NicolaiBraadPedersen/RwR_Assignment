@@ -6,7 +6,7 @@ framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD",
                       "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")], as.factor)
 
 ## Delete the variables that are obsolete
-framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "PERIOD", "TIMEAP","ANGINA","HYPERTEN"))
+framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "RANDID", "TIMEAP","ANGINA","HYPERTEN"))
 ##Summary
 summary(framingham)
 
