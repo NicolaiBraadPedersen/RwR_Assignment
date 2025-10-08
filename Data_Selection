@@ -8,6 +8,15 @@ framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD",
 framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "PERIOD", "TIMEAP"))
 framingham
 
+#split cigpday into levels 0-3
+
+cigpday_f <- framingham$CIGPDAY
+cigpday_f[cigpday_f >= 1 & cigpday_f <= 10] <- 1
+cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
+cigpday_f[cigpday_f >= 21 ] <- 3
+framingham$CIGPDAY <- cigpday_f
+
+
 
 
 
