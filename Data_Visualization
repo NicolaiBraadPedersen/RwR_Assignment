@@ -1,27 +1,39 @@
-##Marginal distributions
+##Marginal distributions, comparing our dataset with and without omit.na
+#Delete Glucose as variable in framingham, to compare with famingham_g such that the amount of variables are the same
+framingham_ng <- framingham %>% select(-c("GLUCOSE"))
+framingham_ng
 plot <- list()
 
-tmp <- lapply(names(framingham), function(x)
-  ggplot(data = framingham[, x, drop = FALSE]) +
+tmp <- lapply(names(framingham_ng), function(x)
+  ggplot(data = framingham_ng[, x, drop = FALSE]) +
     aes_string(x) +
-    xlab(x) + 
+    xlab(x) +
     ylab("")
   )
 
-gd <- geom_density(adjust = 2, fill = gray(.5))
-gb <- geom_bar(fill = gray(.5))
-for (i in 1:length(framingham)){
-  col_class <- class(framingham[[i]])[1]
+gd <- geom_density(data = framingham_ng, adjust = 2, color = "red", alpha = 0.4)
+
+gb <- geom_bar(data = framingham_ng, color = "red", alpha = 0.4)
+
+gd_na <- geom_density(data = framingham_no_na, adjust = 2,color = "blue", alpha = 0.4)
+
+gb_na <- geom_bar(data = framingham_no_na, color = "blue", alpha = 0.4)
+
+for (i in 1:length(framingham_ng)){
+  col_class <- class(framingham_ng[[i]])[1]
   if (col_class == "factor"){
-    p <- tmp[[i]] + gb
-  } 
-  else if(col_class !="factor"){
-    p <- tmp[[i]] + gd
+    p <- tmp[[i]] + gb + gb_na
+  } else if (col_class != "factor"){
+    p <- tmp[[i]] + gd + gd_na
   }
   plot[[i]] <- p
 }
 
-plot
+for (i in seq(1, length(framingham_ng), by = 2))
+     {
+  grid.arrange(plot[[i]], plot[[i+1]], ncol = 2)
+}
+
 
 
 #Correlation plot
