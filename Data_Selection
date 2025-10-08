@@ -16,7 +16,11 @@ cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
 cigpday_f[cigpday_f >= 21 ] <- 3
 framingham$CIGPDAY <- cigpday_f
 framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
+## MAKE NEW PREVCVD
+framingham$PREVCVD = ifelse(framingham$PREVCHD==1 | framingham$PREVMI==1 | framingham$PREVSTRK==1,1,0)
 
+## Delete the variables used to make new columns ##
+framingham <- framingham %>% select(-c("PREVSTRK","PREVCHD","PREVMI","CURSMOKE"))
 
 
 
