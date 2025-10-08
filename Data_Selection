@@ -27,11 +27,11 @@ framingham$PREVCVD = as.factor(ifelse(framingham$PREVCHD==1 | framingham$PREVMI=
 framingham <- framingham %>% select(-c("PREVSTRK","PREVCHD","PREVMI","CURSMOKE","HDLC","LDLC"))
 
 ## Creating dataset with no GLUCOSE column and all NA rows
-framingham_g <- framingham
+framingham_no_na <- framingham
 
-framingham_g <- framingham %>% select(-c("GLUCOSE"))
+framingham_no_na <- framingham %>% select(-c("GLUCOSE"))
 
-framingham_g <- na.omit(framingham_g)
+framingham_no_na <- na.omit(framingham_no_na)
 
 
 
