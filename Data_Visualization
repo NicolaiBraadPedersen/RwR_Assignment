@@ -1,1 +1,24 @@
+##Marginal distributions
+plot <- list()
 
+tmp <- lapply(names(framingham), function(x)
+  ggplot(data = framingham[, x, drop = FALSE]) +
+    aes_string(x) +
+    xlab(x) + 
+    ylab("")
+  )
+
+gd <- geom_density(adjust = 2, fill = gray(.5))
+gb <- geom_bar(fill = gray(.5))
+for (i in 1:length(framingham)){
+  col_class <- class(framingham[[i]])[1]
+  if (col_class == "factor"){
+    p <- tmp[[i]] + gb
+  } 
+  else if(col_class !="factor"){
+    p <- tmp[[i]] + gd
+  }
+  plot[[i]] <- p
+}
+
+plot
