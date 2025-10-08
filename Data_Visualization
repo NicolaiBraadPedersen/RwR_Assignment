@@ -22,3 +22,22 @@ for (i in 1:length(framingham)){
 }
 
 plot
+
+
+#Correlation plot
+
+cp <- cor(
+  data.matrix(framingham |> select(-c("CVD", "TIMECVD"))), 
+  use = "complete.obs", 
+  method = "spearman"
+)
+
+corrplot::corrplot(
+  cp, 
+  diag = FALSE, 
+  order = "hclust", 
+  addrect = 10, 
+  tl.srt = 45, 
+  tl.col = "black", 
+  tl.cex = 0.8
+)
