@@ -53,3 +53,23 @@ corrplot::corrplot(
   tl.col = "black", 
   tl.cex = 0.8
 )
+
+# printing marginal asssocations for factor variables with CVD
+cols <- c("SEX", "CIGPDAY", "DIABETES", "BPMEDS", "educ", "PREVCHD", "PREVSTRK")
+
+for (x in cols) {
+  tab <- table(framingham[[x]], framingham$CVD)
+  
+  tab_col <- prop.table(tab, margin = 2)
+  
+  cat("\n\n###", x, " Share of", x, "within each level of CVD\n")
+  print(kable(tab_col, digits = 3))
+}
+
+
+
+
+
+
+
+
