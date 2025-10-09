@@ -32,6 +32,10 @@ framingham_no_na <- framingham %>% select(-c("GLUCOSE"))
 
 framingham_no_na <- na.omit(framingham_no_na)
 
-
+##Below is based on correlation table
+##We will exclude DIABP AND PREHYP since it is highly correlated with with SYSBP
+##PREVCHD OG PREVAP OG PREVMI IS HIGHLY CORRELATED AND THEY PREVAP AND PREVMI CONTAINED IN PRECCHD
+framingham <- framingham_no_na |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
+framingham
 
 
