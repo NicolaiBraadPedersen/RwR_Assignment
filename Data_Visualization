@@ -66,6 +66,55 @@ for (x in cols) {
   print(kable(tab_col, digits = 3))
 }
 
+##Additive model 
+form_add <- CVD ~ CIGPDAY + educ + SEX + HEARTRTE + DIABETES + BMI + SYSBP + TOTCHOL + AGE + PREVCHD + BPMEDS + PREVSTRK
+
+## figure out the order of the variables
+glm_add <- glm(form_add, data = framingham, family = binomial)
+glm_add_aug <- augment(glm_add, type.residuals = "pearson") |> mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+drop1(glm_add, test = "LRT") |> 
+  tidy() |> 
+  arrange(p.value, desc(LRT)) |>
+  filter(term != "<none>") |>
+  select(-AIC) |>
+  knitr::kable()
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + HEARTRTE + educ + BPMEDS
+
+##Now we figure out which link function to use, which ends up being the logit
+
+small_glm_prob <- glm(
+    form_add, 
+    data = framingham, 
+    family = binomial(link = "probit")
+)
+small_glm_cloglog <- glm(
+    form_add, 
+    data = framingham, 
+    family = binomial(link = "cloglog")
+)
+small_glm_logit <- glm(
+  form_add,
+  data = framingham,
+  family = binomial(link = "logit")
+)
+
+
+comp_fit <- function(data, mapping, ...) {
+    ggplot(data, mapping, ...) + 
+        geom_abline(slope = 1, intercept = 0, color = "blue") + 
+        geom_point(..., alpha = 0.1, pch = 20) +
+        coord_cartesian(xlim = c(0, 0.5), ylim = c(0, 0.5))
+}
+
+tibble(
+    logit = fitted(small_glm_logit),
+    probit = fitted(small_glm_prob),
+    cloglog = fitted(small_glm_cloglog),
+    ) |> 
+  GGally::ggpairs(
+    lower = list(continuous = comp_fit),
+    diag = list(continuous = "blankDiag")
+    )
 
 
 
