@@ -1,0 +1,20 @@
+n=nrow(framingham)
+sample = sample(1:n,0.02*n)
+surv_plot <- framingham[sample,] %>%
+  mutate(
+    id = row_number(),
+    T = pmin(TIMECVD, TIMEDTH, 8766),
+    
+    status = ifelse(TIMECVD < TIMEDTH,"CVD",
+                     ifelse(DEATH==1,"Censored",
+                            ifelse(TIMECVD==8766,"Censored",
+                            ifelse(CVD==0 & DEATH==0 & TIMECVD<8766,"Censored","Error")))),
+    ) %>% arrange(T) %>% mutate(id=row_number())
+
+# Plot
+ggplot(surv_plot, aes(x = 0, xend = T, y = id, yend = id)) +
+  geom_segment(color = "black",alpha=0.7) +
+  geom_point(aes(x = T, color = status)) +
+  scale_color_manual(values = c("CVD" = "steelblue", "Censored" = "red")) +
+  labs(x = "Time (days)", y = "Patient", color = "Status") +
+  theme_minimal()
