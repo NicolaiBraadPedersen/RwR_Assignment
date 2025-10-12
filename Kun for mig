@@ -1,0 +1,444 @@
+```{r}
+library("gridExtra")
+library("broom")
+library("dplyr")
+library("splines")
+library("tibble")
+library("ggplot2")
+library("pracma")
+library(RwR)
+library("markdown")
+library(glmnet)
+library(GGally)
+```
+
+```{r}
+library(riskCommunicator)
+data(framingham, package = "riskCommunicator")
+?framingham
+framingham <- data.frame(framingham)
+summary(framingham)
+```
+
+
+```{r}
+framingham <- framingham[framingham$PERIOD == 1,]
+framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+             "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+             "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "HYPERTEN", "CVD")] <- 
+  lapply(framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+                      "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+                      "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "HYPERTEN", "CVD")], as.factor)
+
+## Delete the variables that are obsolete
+framingham <- framingham %>% select(-c("DEATH", "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEDTH", "TIMEHYP", "ANYCHD", "TIME", "RANDID", "TIMEAP","ANGINA","HYPERTEN", "PERIOD"))
+##Summary
+summary(framingham)
+
+#split cigpday into levels 0-3
+
+cigpday_f <- framingham$CIGPDAY
+cigpday_f[cigpday_f >= 1 & cigpday_f <= 10] <- 1
+cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
+cigpday_f[cigpday_f >= 21 ] <- 3
+framingham$CIGPDAY <- cigpday_f
+framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
+
+## Delete the variables used to make new columns ##
+framingham <- framingham %>% select(-c("CURSMOKE","HDLC","LDLC"))
+
+## Creating dataset with no GLUCOSE column and all NA rows
+framingham_no_na <- framingham
+
+framingham_no_na <- framingham %>% select(-c("GLUCOSE"))
+
+framingham_no_na <- na.omit(framingham_no_na)
+```
+
+```{r}
+#Delete Glucose as variable in framingham, to compare with famingham_g such that the amount of variables are the same
+framingham_ng <- framingham %>% select(-c("GLUCOSE"))
+plot <- list()
+
+tmp <- lapply(names(framingham_ng), function(x)
+  ggplot(data = framingham_ng[, x, drop = FALSE]) +
+    aes_string(x) +
+    xlab(x) +
+    ylab("")
+  )
+
+gd <- geom_density(data = framingham_ng, adjust = 2, color = "red", alpha = 0.4)
+
+gb <- geom_bar(data = framingham_ng, color = "red", alpha = 0.4)
+
+gd_na <- geom_density(data = framingham_no_na, adjust = 2,color = "blue", alpha = 0.4)
+
+gb_na <- geom_bar(data = framingham_no_na, color = "blue", alpha = 0.4)
+
+for (i in 1:length(framingham_ng)){
+  col_class <- class(framingham_ng[[i]])[1]
+  if (col_class == "factor"){
+    p <- tmp[[i]] + gb + gb_na
+  } else if (col_class != "factor"){
+    p <- tmp[[i]] + gd + gd_na
+  }
+  plot[[i]] <- p
+}
+
+for (i in seq(1, length(framingham_ng)))
+     {
+  grid.arrange(plot[[i]])
+}
+
+
+```
+
+
+```{r}
+##Based on plot above, we will continue using the framingham data, without any na
+framingham_no_na
+```
+
+
+
+```{r}
+#Correlation plot
+
+cp <- cor(
+  data.matrix(framingham_no_na |> select(-c("CVD", "TIMECVD"))), 
+  use = "complete.obs", 
+  method = "spearman"
+)
+
+corrplot::corrplot(
+  cp, 
+  diag = FALSE, 
+  order = "hclust", 
+  addrect = 10, 
+  tl.srt = 45, 
+  tl.col = "black", 
+  tl.cex = 0.8
+)
+
+```
+```{r}
+##We will exclude DIABP AND PREHYP since it is highly correlated with with SYSBP  
+##PREVCHD OG PREVAP OG PREVMI IS HIGHLY CORRELATED AND THEY PREVAP AND PREVMI CONTAINED IN PRECCHD
+framingham <- framingham_no_na |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
+framingham
+```
+
+
+```{r}
+dev_resid <- function(diag){
+  ggplot(diag, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  xlab("Fitted values") +
+  ylab("Deviance residuals")
+}
+pear_resid <- function(diag){
+  ggplot(diag, aes(x = .fitted, y = pearson_resid)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  xlab("Fitted values") +
+  ylab("Pearson residuals")
+}
+
+theo_quant <- function(diag){
+  ggplot(diag, aes(sample = .std.resid)) +
+  geom_qq() + geom_abline() +
+  xlab("theoretical quantiles") +
+  ylab("")
+}
+```
+
+
+```{r}
+form_add <- CVD ~ CIGPDAY + educ + SEX + HEARTRTE + DIABETES + BMI + SYSBP + TOTCHOL + AGE + PREVCHD + BPMEDS + PREVSTRK
+#form_int <- CVD ~ (CIGPDAY + educ + SEX + HEARTRTE + DIABETES + BMI + SYSBP + TOTCHOL + AGE + PREVCHD + BPMEDS + PREVSTRK)^2
+```
+
+```{r}
+glm_add <- glm(form_add, data = framingham, family = binomial)
+glm_add_aug <- augment(glm_add, type.residuals = "pearson") |> mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+drop1(glm_add, test = "LRT") |> 
+  tidy() |> 
+  arrange(p.value, desc(LRT)) |>
+  filter(term != "<none>") |>
+  select(-AIC) |>
+  knitr::kable()
+
+```
+
+```{r}
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + HEARTRTE + educ + BPMEDS
+
+small_glm_prob <- glm(
+    form_add, 
+    data = framingham, 
+    family = binomial(link = "probit")
+)
+small_glm_cloglog <- glm(
+    form_add, 
+    data = framingham, 
+    family = binomial(link = "cloglog")
+)
+small_glm_logit <- glm(
+  form_add,
+  data = framingham,
+  family = binomial(link = "logit")
+)
+
+
+comp_fit <- function(data, mapping, ...) {
+    ggplot(data, mapping, ...) + 
+        geom_abline(slope = 1, intercept = 0, color = "blue") + 
+        geom_point(..., alpha = 0.1, pch = 20) +
+        coord_cartesian(xlim = c(0, 0.5), ylim = c(0, 0.5))
+}
+
+tibble(
+    logit = fitted(small_glm_logit),
+    probit = fitted(small_glm_prob),
+    cloglog = fitted(small_glm_cloglog),
+    ) |> 
+  GGally::ggpairs(
+    lower = list(continuous = comp_fit),
+    diag = list(continuous = "blankDiag")
+    )
+```
+
+
+```{r}
+#test for familier
+glm_func <- function(form, family){
+  glm_add <- glm(form,
+                 data = framingham,
+                 family = family)
+  
+  glm_diag_add <- augment(glm_add, type.predict = "response")
+  
+  glm_diag_add$pearson_resid <- residuals(glm_add, type = "pearson")
+  
+  p1 <- dev_resid(glm_diag_add)
+  p2 <- pear_resid(glm_diag_add)
+  p3 <- theo_quant(glm_diag_add)
+  grid.arrange(p1, p2, p3, ncol = 3)
+}
+
+
+glm_func(form_add, family = binomial("logit"))
+glm_func(form_add, family = binomial("probit"))
+glm_func(form_add, family = binomial("cloglog"))
+
+
+
+
+```
+
+
+
+```{r}
+##Produce model without the worst (when looking at p-values) last 3 variables from the drop1
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI
+glm_add_mod <- glm(form_add, data = framingham, family = binomial("logit"))
+
+
+##residuals for each of the variables 
+## Code below is from chapter 10
+glm_add_mod_aug <- augment(glm_add_mod, type.residuals = "pearson") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+
+##Create a list of names of the variabels
+var_name <- all.vars(form_add)[-1]
+var_name
+for (i in var_name){
+  p <- glm_add_mod_aug |> 
+    ggplot(aes(x = !!sym(i), y = .resid)) + 
+    geom_point() + 
+    geom_smooth(method = "glm") + 
+    ylab("Pearson residuals")
+  print(p)
+}
+
+##plot glm_add_mod with and without 
+
+
+```
+
+```{r}
+##Make an additive model without the PREVSTRK and then compare the models with cv
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI
+glm_add_mod <- glm(form_add, data = framingham, family = binomial("logit"))
+
+tidy(glm_add_mod)[-1, "estimate"] |> 
+    cbind(confint.lm(glm_add_mod)[-1, ]) |>
+    knitr::kable(digits = 2)
+
+form_add_nostrk <- CVD ~ SEX + AGE + SYSBP + PREVCHD + DIABETES + TOTCHOL + CIGPDAY + BMI
+glm_add_mod_nostrk <- glm(form_add_nostrk, data = framingham, family = binomial("logit"))
+tidy(glm_add_mod_nostrk)[-1, "estimate"] |> 
+    cbind(confint.lm(glm_add_mod_nostrk)[-1, ]) |>
+    knitr::kable(digits = 2)
+
+##Vi fjerner prevStrk baseret på cross validation.
+```
+
+
+```{r}
+#plot from chapter 10 without 
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI
+form_add_nstrk <- CVD ~ SEX + AGE + SYSBP + PREVCHD + DIABETES + TOTCHOL + CIGPDAY + BMI
+glm_add <- glm(form_add, data = framingham, family = binomial("logit"))
+glm_add_nostrk <- glm(form_add_nstrk, data = framingham, family = binomial("logit"))
+p1 <- augment(glm_add) |> 
+    ggplot(aes(.fitted, fill = factor(CVD))) +
+    geom_density(alpha = 0.6, color = NA) +
+    scale_fill_brewer("small", palette = "Set1") + 
+    ggtitle("Additive model") + 
+    coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1.4))
+p2 <- augment(glm_add_nostrk) |> 
+    ggplot(aes(.fitted, fill = factor(CVD))) +
+    geom_density(alpha = 0.6, color = NA) +
+    scale_fill_brewer("small", palette = "Set1") +
+    ggtitle("Interaction model") + 
+    coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1.4))
+gridExtra::grid.arrange(p1, p2, ncol = 1)
+
+## vi beholder PREVSTRK
+
+glm_add_aug <- augment(glm_add, type.residuals = "pearson") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+
+var_name <- all.vars(form_add)[-1]
+var_name
+for (i in var_name){
+  p <- glm_add_aug |> 
+    ggplot(aes(x = !!sym(i), y = .resid)) + 
+    geom_point() + 
+    geom_smooth(method = "glm") + 
+    ylab("Pearson residuals")
+  print(p)
+}
+
+```
+
+
+```{r}
+##Interaction 
+form_add <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI
+form_int_medium <- CVD ~ CIGPDAY*(SEX + AGE + BMI) + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL
+form_int_small <- CVD ~ (SEX + AGE + CIGPDAY + BMI)^2 + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL
+form_int_full <- CVD ~ (SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI)^2
+
+
+glm_add <- glm(form_add, data = framingham, family = binomial("logit"))
+glm_int_medium <- glm(form_int_medium, data = framingham, family = binomial("logit"))
+glm_int_small <- glm(form_int_small, data = framingham, family = binomial("logit"))
+glm_int_full <- glm(form_int_full, data = framingham, family = binomial("logit"))
+
+anova(glm_add, glm_int_medium, glm_int_small, glm_int_full)
+drop1(glm_int_medium, test = "LRT") 
+
+
+form_int_mod <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + SEX:CIGPDAY + AGE:CIGPDAY + CIGPDAY:BMI
+glm_int_mod <- glm(form_int_mod, data = framingham, family = binomial("logit"))
+anova(glm_add, glm_int_mod)
+drop1(glm_int_mod, test = "LRT")
+
+
+glm_func(form_int_mod, family = binomial("logit"))
+
+tidy(glm_int_mod)[-1, "estimate"] |> 
+    cbind(confint.lm(glm_int_mod)[-1, ]) |>
+    knitr::kable(digits = 2)
+
+
+
+
+```
+
+
+
+
+```{r}
+##Vi plotter alle variablene imod hinanden
+form_int_medium <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + SEX:CIGPDAY + AGE:CIGPDAY + CIGPDAY:BMI
+glm_int_mod <- glm(form_int_medium, data = framingham, family = binomial("logit"))
+glm_int_mod
+
+glm_int_aug <- augment(glm_int_mod, type.residuals = "pearson") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+
+
+c1 <- glm_int_aug |> filter(CIGPDAY == 0)
+c2 <- glm_int_aug |> filter(CIGPDAY == 1)
+c3 <- glm_int_aug |> filter(CIGPDAY == 2)
+c4 <- glm_int_aug |> filter(CIGPDAY == 3)
+
+
+plots_int <- function(x){
+  p1 <- x |> 
+    ggplot(aes(AGE, .resid)) +
+    geom_point() +
+    geom_smooth() +
+    ylab("Pearson residuals")
+  p2 <- x |> 
+    ggplot(aes(SEX, .resid)) +
+    geom_point() +
+    geom_smooth() +
+    ylab("Pearson residuals")
+  p3 <- x |>
+    ggplot(aes(BMI, .resid)) +
+    geom_point() +
+    geom_smooth() +
+    ylab("Pearson residuals")
+  gridExtra::grid.arrange(p1, p2, p3, ncol = 3)}
+
+
+plots_int(c1)
+plots_int(c2)
+plots_int(c3)
+plots_int(c4)
+
+
+
+
+```
+
+```{r}
+form_int_medium <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + SEX:CIGPDAY + AGE:CIGPDAY + CIGPDAY:BMI
+glm_int_mod <- glm(form_int_medium, data = framingham, family = binomial("logit"))
+
+form_int_spl <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + BMI + SEX:CIGPDAY + AGE:CIGPDAY + CIGPDAY:ns(BMI, df = 3)
+glm_int_spl <- glm(form_int_spl, data = framingham, family = binomial("logit"))
+
+anova(glm_int_mod, glm_int_spl)
+
+glm_int_spl_aug <- augment(glm_int_spl, type.residuals = "pearson") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+
+k1 <- glm_int_spl_aug |> filter(CIGPDAY == 0)
+k2 <- glm_int_spl_aug |> filter(CIGPDAY == 1)
+k3 <- glm_int_spl_aug |> filter(CIGPDAY == 2)
+k4 <- glm_int_spl_aug |> filter(CIGPDAY == 3)
+plots_int(k1)
+plots_int(k2)
+plots_int(k3)
+plots_int(k4)
+```
+
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+
