@@ -73,7 +73,7 @@ framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
 framingham <- framingham |> select(-"CURSMOKE")
 
 cp <- cor(
-  data.matrix(framingham |> select(-c("CVD", "TIMECVD","DEATH","TIMEDTH"))), 
+  data.matrix(framingham |> select(-c("TIMECVD","DEATH","TIMEDTH"))), 
   use ="complete.obs",
   method = "spearman"
 )
