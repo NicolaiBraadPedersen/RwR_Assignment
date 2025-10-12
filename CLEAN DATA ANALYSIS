@@ -1,0 +1,90 @@
+data(framingham, package = "riskCommunicator")
+framingham <- framingham[framingham$PERIOD == 1,]
+framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+             "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+             "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")] <- 
+  lapply(framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+                      "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+                      "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")], as.factor)
+
+## Delete the variables that are obsolete
+framingham <- framingham %>% select(-c( "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEHYP", "ANYCHD", "TIME", 
+                                        "RANDID", "TIMEAP","ANGINA","HYPERTEN", "PERIOD"))
+### Summary ###
+summary(framingham)
+## TO many NA's ##
+framingham <- framingham %>% select(-c("HDLC","LDLC","GLUCOSE"))
+
+## Creating dataset with no GLUCOSE column and all NA rows
+
+framingham_na <- framingham[!complete.cases(framingham),]
+
+framingham = na.omit(framingham)
+##Below is based on correlation table
+##We will exclude DIABP AND PREHYP since it is highly correlated with with SYSBP
+##PREVCHD OG PREVAP OG PREVMI IS HIGHLY CORRELATED AND THEY PREVAP AND PREVMI CONTAINED IN PRECCHD
+framingham_plot <- framingham |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
+framingham_na_plot <- framingham_na |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
+
+
+
+
+plot <- list()
+
+tmp <- lapply(names(framingham_plot), function(x)
+  ggplot(data = framingham[, x, drop = FALSE]) +
+    aes_string(x) +
+    xlab(x) +
+    ylab("")
+)
+gd <- geom_density(data = framingham_plot, adjust = 2, color = "red", alpha = 0.4)
+
+gb <- geom_bar(data = framingham_plot, aes(y = after_stat(count / sum(count) * 100)),color = "red", alpha = 0.4)
+
+gd_na <- geom_density(data = framingham_na_plot, adjust = 2,color = "blue", alpha = 0.4)
+
+gb_na <- geom_bar(data = framingham_na_plot,aes(y = after_stat(count / sum(count) * 100)),color = "blue", alpha = 0.4)
+
+for (i in 1:length(framingham_plot)){
+  col_class <- class(framingham_plot[[i]])[1]
+  if (col_class == "factor"){
+    p <- tmp[[i]] + gb + gb_na
+  } else if (col_class != "factor"){
+    p <- tmp[[i]] + gd + gd_na
+  }
+  plot[[i]] <- p
+}
+
+for (i in seq(1, length(framingham_plot), by = 2)) {
+  if (i + 1 <= length(plot)) {
+    grid.arrange(plot[[i]], plot[[i+1]], ncol = 2)
+  } else {
+    grid.arrange(plot[[i]], ncol = 1)
+  }
+}
+
+cigpday_f <- framingham$CIGPDAY
+cigpday_f[cigpday_f >= 1 & cigpday_f <= 10] <- 1
+cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
+cigpday_f[cigpday_f >= 21 ] <- 3
+framingham$CIGPDAY <- cigpday_f
+framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
+
+framingham <- framingham |> select(-"CURSMOKE")
+
+cp <- cor(
+  data.matrix(framingham |> select(-c("CVD", "TIMECVD","DEATH","TIMEDTH"))), 
+  use ="complete.obs",
+  method = "spearman"
+)
+
+corrplot::corrplot(
+  cp, 
+  diag = FALSE, 
+  order = "hclust", 
+  addrect = 10, 
+  tl.srt = 45, 
+  tl.col = "black", 
+  tl.cex = 0.8
+)
+framingham <- framingham |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
