@@ -1,0 +1,52 @@
+cv <- function(form, data, K = 10) {
+  n <- nrow(data)
+  response <- all.vars(form)[1]
+  mu_hat <- numeric(n)
+  group <- sample(rep(1:K, length.out = n))
+  for(i in 1:K) {
+    model <- glm(form, data = data[group != i, ], family = "binomial")
+    mu_hat[group == i] <- 
+      predict(model, newdata = data[group == i, ], type = "response")
+  }
+  mu_hat
+}
+
+deviance <- function(y, p) ifelse(y == 1, -2 * log(p), -2 * log(1 - p))
+pearson <- function(y, p) (y - p)^2 / (p * (1 - p))
+auc <- function(y, eta) {
+  eta1 <- eta[y == 1]
+  eta0 <- eta[y == 0]
+  wilcox.test(eta1, eta0)$statistic / (length(eta1) * length(eta0))
+}
+
+form <- CVD ~ SEX + AGE + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL + CIGPDAY + 
+  BMI
+
+form1 <- CVD ~ (SEX + AGE + BMI + CIGPDAY)^2
+                + SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL  
+
+form2 <- CVD ~ (SEX + AGE + CIGPDAY + BMI
++ SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL)^2
+
+form3 <- CVD ~ CIGPDAY * (SEX + AGE + BMI)
++ SYSBP + PREVCHD + PREVSTRK + DIABETES + TOTCHOL
+
+
+
+
+Err <- tibble(
+  model = c("form (CV)", "form1 (CV)", "form2 (CV)", "form3 (CV)"),
+  Deviance = c(
+    deviance(framingham$CVD, cv(form, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form1, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form2, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form3, framingham)) |> mean()
+  ),
+  AUC = c(auc(framingham$CVD, cv(form, framingham)),
+    auc(framingham$CVD, cv(form1, framingham)), 
+    auc(framingham$CVD, cv(form2, framingham)),
+    auc(framingham$CVD, cv(form3, framingham))
+  )
+)
+
+Err
