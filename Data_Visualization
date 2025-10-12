@@ -1,26 +1,35 @@
 ##Marginal distributions, comparing our dataset with and without omit.na
 #Delete Glucose as variable in framingham, to compare with famingham_g such that the amount of variables are the same
-framingham_ng <- framingham %>% select(-c("GLUCOSE"))
-framingham_ng
+framingham <- framingham %>% select(-c("GLUCOSE"))
+
+framingham_na <- framingham[!complete.cases(framingham),]
+framingham = na.omit(framingham)
+
+##We will exclude DIABP AND PREHYP since it is highly correlated with with SYSBP
+##PREVCHD OG PREVAP OG PREVMI IS HIGHLY CORRELATED AND THEY PREVAP AND PREVMI CONTAINED IN PRECCHD
+framingham <- framingham |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
+framingham_na <- framingham_na |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
+### Removing response variables ###
+framingham_plot <- framingham |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
+framingham_na_plot <- framingham_na |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
 plot <- list()
 
-tmp <- lapply(names(framingham_ng), function(x)
-  ggplot(data = framingham_ng[, x, drop = FALSE]) +
+tmp <- lapply(names(framingham_plot), function(x)
+  ggplot(data = framingham[, x, drop = FALSE]) +
     aes_string(x) +
     xlab(x) +
     ylab("")
-  )
+)
+gd <- geom_density(data = framingham_plot, adjust = 2, color = "red", alpha = 0.4)
 
-gd <- geom_density(data = framingham_ng, adjust = 2, color = "red", alpha = 0.4)
+gb <- geom_bar(data = framingham_plot, aes(y = after_stat(count / sum(count) * 100)),color = "red", alpha = 0.4)
 
-gb <- geom_bar(data = framingham_ng, color = "red", alpha = 0.4)
+gd_na <- geom_density(data = framingham_na_plot, adjust = 2,color = "blue", alpha = 0.4)
 
-gd_na <- geom_density(data = framingham_no_na, adjust = 2,color = "blue", alpha = 0.4)
+gb_na <- geom_bar(data = framingham_na_plot,aes(y = after_stat(count / sum(count) * 100)),color = "blue", alpha = 0.4)
 
-gb_na <- geom_bar(data = framingham_no_na, color = "blue", alpha = 0.4)
-
-for (i in 1:length(framingham_ng)){
-  col_class <- class(framingham_ng[[i]])[1]
+for (i in 1:length(framingham_plot)){
+  col_class <- class(framingham_plot[[i]])[1]
   if (col_class == "factor"){
     p <- tmp[[i]] + gb + gb_na
   } else if (col_class != "factor"){
@@ -29,9 +38,12 @@ for (i in 1:length(framingham_ng)){
   plot[[i]] <- p
 }
 
-for (i in seq(1, length(framingham_ng), by = 2))
-     {
-  grid.arrange(plot[[i]], plot[[i+1]], ncol = 2)
+for (i in seq(1, length(framingham_plot), by = 2)) {
+  if (i + 1 <= length(plot)) {
+    grid.arrange(plot[[i]], plot[[i+1]], ncol = 2)
+  } else {
+    grid.arrange(plot[[i]], ncol = 1)
+  }
 }
 
 
