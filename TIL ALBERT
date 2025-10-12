@@ -1,0 +1,74 @@
+cv <- function(form, data, K = 10) {
+  n <- nrow(data)
+  response <- all.vars(form)[1]
+  mu_hat <- numeric(n)
+  group <- sample(rep(1:K, length.out = n))
+  for(i in 1:K) {
+    model <- glm(form, data = data[group != i, ], family = binomial(link="logit"))
+    mu_hat[group == i] <- 
+      predict(model, newdata = data[group == i, ], type = "response")
+  }
+  mu_hat
+}
+
+
+form1 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK
+form2 = CVD ~ (SEX + AGE + BMI + CIGPDAY)^2 + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK
+form3 = CVD ~ (SEX + AGE + BMI)*CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD
+form4 = CVD ~ (SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES +PREVSTRK)^2
+
+deviance <- function(y, p) ifelse(y == 1, -2 * log(p), -2 * log(1 - p))
+auc <- function(y, eta) {
+  eta1 <- eta[y == 1]
+  eta0 <- eta[y == 0]
+  wilcox.test(eta1, eta0)$statistic / (length(eta1) * length(eta0))
+}
+
+Err <- tibble(
+  model = c("Additive all", "Int S,A,B,C","CIGPDAY INT","Int All"),
+  Deviance = c(
+    deviance(framingham$CVD, cv(form1, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form2, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form3, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form4, framingham)) |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, cv(form1, framingham)), 
+    auc(framingham$CVD, cv(form2, framingham)),
+    auc(framingham$CVD, cv(form3, framingham)),
+    auc(framingham$CVD, cv(form4, framingham))
+  )
+)
+Err
+
+
+model_int = glm(form3, data=framingham,family=binomial())
+model_add = glm(form1, data=framingham, family=binomial())
+
+compare = data.frame(int = predict(model_int, type="response"),
+                     add = predict(model_add,type="response"))
+### PLOT COMPARING ####
+ggplot(compare, aes(x=add,y=int))+geom_point()+ geom_smooth()
+
+form5 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD +
+  CIGPDAY:SEX + CIGPDAY:AGE +CIGPDAY:ns(BMI,df=2)
+
+form6 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD +
+  CIGPDAY:SEX + CIGPDAY:AGE+CIGPDAY:ns(BMI,df=3)
+
+Err2 <- tibble(
+  model = c("No Spline", "DF=2","DF=3"),
+  Deviance = c(
+    deviance(framingham$CVD, cv(form3, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form5, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form6, framingham)) |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, cv(form3, framingham)), 
+    auc(framingham$CVD, cv(form5, framingham)),
+    auc(framingham$CVD, cv(form6, framingham))
+  )
+)
+Err2
+
+
