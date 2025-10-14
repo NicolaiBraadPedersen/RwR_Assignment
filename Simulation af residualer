@@ -1,0 +1,38 @@
+form = CVD ~ SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD + HEARTRTE + educ + BPMEDS
+model1_logit = glm(form, framingham, family=binomial(link="logit"))
+model1_cloglog = glm(form, framingham, family=binomial(link="cloglog"))
+model1_probit = glm(form, framingham, family=binomial(link="probit"))
+
+sim_logit = rbinom(n=length(framingham$CVD), size=1, prob = model1_logit$fitted)
+model_sim_logit = glm(sim_logit ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD+HEARTRTE+educ+BPMEDS, 
+                      framingham, family=binomial(link="logit") )
+sim_probit = rbinom(n=length(framingham$CVD), size=1, prob = model1_probit$fitted)
+model_sim_probit = glm(sim_probit ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD+HEARTRTE+educ+BPMEDS, 
+                      framingham, family=binomial(link="probit") )
+sim_cloglog = rbinom(n=length(framingham$CVD), size=1, prob = model1_cloglog$fitted)
+model_sim_cloglog = glm(sim_cloglog ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD+HEARTRTE+educ+BPMEDS, 
+                      framingham, family=binomial(link="cloglog") )
+
+sim_res_logit = augment(model_sim_logit)
+sim_res_probit = augment(model_sim_probit)
+sim_res_cloglog = augment(model_sim_cloglog)
+
+logit_res = augment(model1_logit)
+logit_res_pear = augment(model1_logit, type.residual="pearson")
+
+probit_res = augment(model1_probit)
+probit_res_pear = augment(model1_probit, type.residual="pearson")
+
+cloglog_res = augment(model1_cloglog)
+cloglog_res_pear = augment(model1_cloglog, type.residual="pearson")
+
+p1 <- ggplot(logit_res, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("logit dev")
+p2 <- ggplot(probit_res, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit dev")
+p3 <- ggplot(cloglog_res, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("cloglog dev")
+p4 <- ggplot(logit_res_pear, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("logit pear residuals")
+p5 <- ggplot(probit_res_pear, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit pear residuals")
+p6 <- ggplot(cloglog_res_pear, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("cloglog pear residuals")
+p7 <- ggplot(sim_res_logit, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("logit dev sim")
+p8 <- ggplot(sim_res_probit, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit dev sim")
+p9 <- ggplot(sim_res_cloglog, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("cloglog dev sim")
+gridExtra::grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9,ncol = 3)
