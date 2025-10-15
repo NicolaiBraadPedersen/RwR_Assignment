@@ -1,0 +1,34 @@
+
+form1 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK + HEARTRTE
+
+form5 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK +
+  HEARTRTE + SEX:AGE + SEX:CIGPDAY + SEX:HEARTRTE + AGE:CIGPDAY + AGE:HEARTRTE + BMI:CIGPDAY
+
+group_p <- function(y, p, n_probs = 50) {
+  tibble(
+    y = y,
+    p = p,
+    p_group = cut(p, quantile(p, probs = seq(0, n_probs, 1) / n_probs), include.lowest = TRUE)
+  ) |>
+    group_by(p_group) |>
+    summarize(
+      p_local = mean(p), 
+      obs_local = mean(y), 
+      n = n(), 
+      se_local = sqrt(p_local * (1 - p_local) / n()),
+    )
+}
+cal_plot <- ggplot(mapping = aes(p_local, obs_local)) + 
+  geom_point() + 
+  geom_line(aes(y = p_local + 1.96 * se_local), color = "red") + 
+  geom_line(aes(y = p_local - 1.96 * se_local), color = "red") +
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_smooth() + 
+  xlab("predicted probability") +
+  ylab("observed probability")
+set.seed(27)
+p1 <- cal_plot %+% group_p(as.numeric(framingham$CVD)-1, cv(form1, framingham)) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) + ggtitle("Additive model")
+p2 <- cal_plot %+% group_p(as.numeric(framingham$CVD)-1, cv(form5, framingham)) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) + ggtitle("Interaction model")
+gridExtra::grid.arrange(p1, p2, ncol = 2)
