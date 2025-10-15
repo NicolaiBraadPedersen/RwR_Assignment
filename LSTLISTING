@@ -19,3 +19,20 @@
     commentstyle=\color{YellowGreen},   % comment style  
     stringstyle=\color{ForestGreen}      % string literal style
     } 
+\lstdefinestyle{Rstyle}{
+  language=R,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{orange},
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+  frame=single,
+  captionpos=b,
+  numbers=left,
+  numberstyle=\tiny,
+  columns=flexible,
+  keepspaces=true
+}
