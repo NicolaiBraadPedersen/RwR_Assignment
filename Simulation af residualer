@@ -36,3 +36,5 @@ p7 <- ggplot(sim_res_logit, aes(.fitted, .resid)) + geom_point() + geom_smooth()
 p8 <- ggplot(sim_res_probit, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit dev sim")
 p9 <- ggplot(sim_res_cloglog, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("cloglog dev sim")
 gridExtra::grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9,ncol = 3)
+
+https://pages.stat.wisc.edu/~ane/st572/notes/lec06.pdf
