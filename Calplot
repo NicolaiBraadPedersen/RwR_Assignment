@@ -1,3 +1,15 @@
+cv <- function(form, data, K = 10) {
+  n <- nrow(data)
+  response <- all.vars(form)[1]
+  mu_hat <- numeric(n)
+  group <- sample(rep(1:K, length.out = n))
+  for(i in 1:K) {
+    model <- glm(form, data = data[group != i, ], family = binomial(link="logit"))
+    mu_hat[group == i] <- 
+      predict(model, newdata = data[group == i, ], type = "response")
+  }
+  mu_hat
+}
 
 form1 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK + HEARTRTE
 
@@ -18,6 +30,7 @@ group_p <- function(y, p, n_probs = 50) {
       se_local = sqrt(p_local * (1 - p_local) / n()),
     )
 }
+
 cal_plot <- ggplot(mapping = aes(p_local, obs_local)) + 
   geom_point() + 
   geom_line(aes(y = p_local + 1.96 * se_local), color = "red") + 
