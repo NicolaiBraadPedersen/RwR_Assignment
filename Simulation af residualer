@@ -1,3 +1,96 @@
+library(riskCommunicator)
+library(broom)
+library(ggplot2)
+data(framingham, package = "riskCommunicator")
+framingham <- framingham[framingham$PERIOD == 1,]
+framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+             "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+             "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")] <- 
+   lapply(framingham[c("SEX", "CURSMOKE", "DIABETES", "BPMEDS", "educ", "PREVCHD", 
+                       "PREVAP", "PREVMI", "PREVSTRK", "PREVHYP", "PERIOD", "DEATH", 
+                       "ANGINA", "HOSPMI", "MI_FCHD", "ANYCHD", "STROKE", "CVD", "HYPERTEN")], as.factor)
+
+## Delete the variables that are obsolete
+framingham <- framingham %>% select(-c( "STROKE", "MI_FCHD", "HOSPMI", "TIMEMI", "TIMEMIFC", "TIMECHD", "TIMESTRK", "TIMEHYP", "ANYCHD", "TIME", 
+                                        "RANDID", "TIMEAP","ANGINA","HYPERTEN", "PERIOD"))
+### Summary ###
+summary(framingham)
+## TO many NA's ##
+framingham <- framingham %>% select(-c("HDLC","LDLC","GLUCOSE"))
+
+## Creating dataset with no GLUCOSE column and all NA rows
+
+framingham_na <- framingham[!complete.cases(framingham),]
+
+framingham = na.omit(framingham)
+##Below is based on correlation table
+##We will exclude DIABP AND PREHYP since it is highly correlated with with SYSBP
+##PREVCHD OG PREVAP OG PREVMI IS HIGHLY CORRELATED AND THEY PREVAP AND PREVMI CONTAINED IN PRECCHD
+framingham_plot <- framingham |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
+framingham_na_plot <- framingham_na |> select(-c("DEATH","TIMECVD","TIMEDTH","CVD"))
+
+
+
+
+# plot <- list()
+# 
+# tmp <- lapply(names(framingham_plot), function(x)
+#    ggplot(data = framingham[, x, drop = FALSE]) +
+#       aes_string(x) +
+#       xlab(x) +
+#       ylab("")
+# )
+# gd <- geom_density(data = framingham_plot, adjust = 2, color = "red", alpha = 0.4)
+# 
+# gb <- geom_bar(data = framingham_plot, aes(y = after_stat(count / sum(count) * 100)),color = "red", alpha = 0.4)
+# 
+# gd_na <- geom_density(data = framingham_na_plot, adjust = 2,color = "blue", alpha = 0.4)
+# 
+# gb_na <- geom_bar(data = framingham_na_plot,aes(y = after_stat(count / sum(count) * 100)),color = "blue", alpha = 0.4)
+# 
+# for (i in 1:length(framingham_plot)){
+#    col_class <- class(framingham_plot[[i]])[1]
+#    if (col_class == "factor"){
+#       p <- tmp[[i]] + gb + gb_na
+#    } else if (col_class != "factor"){
+#       p <- tmp[[i]] + gd + gd_na
+#    }
+#    plot[[i]] <- p
+# }
+# 
+# for (i in seq(1, length(framingham_plot), by = 2)) {
+#    if (i + 1 <= length(plot)) {
+#       grid.arrange(plot[[i]], plot[[i+1]], ncol = 2)
+#    } else {
+#       grid.arrange(plot[[i]], ncol = 1)
+#    }
+# }
+
+cigpday_f <- framingham$CIGPDAY
+cigpday_f[cigpday_f >= 1 & cigpday_f <= 10] <- 1
+cigpday_f[cigpday_f >= 11 & cigpday_f <= 20] <- 2
+cigpday_f[cigpday_f >= 21 ] <- 3
+framingham$CIGPDAY <- cigpday_f
+framingham["CIGPDAY"] <- lapply(framingham["CIGPDAY"], as.factor)
+
+framingham <- framingham |> select(-"CURSMOKE")
+
+# cp <- cor(
+#    data.matrix(framingham |> select(-c("TIMECVD","DEATH","TIMEDTH"))), 
+#    use ="complete.obs",
+#    method = "spearman"
+# )
+# 
+# corrplot::corrplot(
+#    cp, 
+#    diag = FALSE, 
+#    order = "hclust", 
+#    addrect = 10, 
+#    tl.srt = 45, 
+#    tl.col = "black", 
+#    tl.cex = 0.8
+# )
+framingham <- framingham |> select(-c("DIABP", "PREVHYP", "PREVMI", "PREVAP")) 
 form = CVD ~ SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD + HEARTRTE + educ + BPMEDS
 model1_logit = glm(form, framingham, family=binomial(link="logit"))
 model1_cloglog = glm(form, framingham, family=binomial(link="cloglog"))
@@ -8,23 +101,26 @@ model_sim_logit = glm(sim_logit ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + P
                       framingham, family=binomial(link="logit") )
 sim_probit = rbinom(n=length(framingham$CVD), size=1, prob = model1_probit$fitted)
 model_sim_probit = glm(sim_probit ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD+HEARTRTE+educ+BPMEDS, 
-                      framingham, family=binomial(link="probit") )
+                       framingham, family=binomial(link="probit") )
 sim_cloglog = rbinom(n=length(framingham$CVD), size=1, prob = model1_cloglog$fitted)
 model_sim_cloglog = glm(sim_cloglog ~SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + PREVSTRK + DIABETES + PREVCHD+HEARTRTE+educ+BPMEDS, 
-                      framingham, family=binomial(link="cloglog") )
+                        framingham, family=binomial(link="cloglog") )
 
 sim_res_logit = augment(model_sim_logit)
 sim_res_probit = augment(model_sim_probit)
 sim_res_cloglog = augment(model_sim_cloglog)
 
 logit_res = augment(model1_logit)
-logit_res_pear = augment(model1_logit, type.residual="pearson")
-
-probit_res = augment(model1_probit)
-probit_res_pear = augment(model1_probit, type.residual="pearson")
+logit_res_pear = augment(model1_logit, type.residual="pearson",type.predict="response") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
+exp(0.3)/(1+exp(0.3))
+probit_res = augment(model1_probit,)
+probit_res_pear = augment(model1_probit, type.residual="pearson",type.predict="response") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
 
 cloglog_res = augment(model1_cloglog)
-cloglog_res_pear = augment(model1_cloglog, type.residual="pearson")
+cloglog_res_pear = augment(model1_cloglog, type.residual="pearson",type.predict="response") |> 
+   mutate(.fitted_group = cut(.fitted, quantile(.fitted, probs = seq(5, 95, 1) / 100)))
 
 p1 <- ggplot(logit_res, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("logit dev")
 p2 <- ggplot(probit_res, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit dev")
@@ -36,5 +132,56 @@ p7 <- ggplot(sim_res_logit, aes(.fitted, .resid)) + geom_point() + geom_smooth()
 p8 <- ggplot(sim_res_probit, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("probit dev sim")
 p9 <- ggplot(sim_res_cloglog, aes(.fitted, .resid)) + geom_point() + geom_smooth() + ggtitle("cloglog dev sim")
 gridExtra::grid.arrange(p1, p2, p3,p4,p5,p6,p7,p8,p9,ncol = 3)
+
+p10 <- logit_res_pear |>
+   group_by(.fitted_group) |>
+   summarize(.fitted_local = mean(.fitted), .var_local = var(.resid)) |>
+   na.omit() |> 
+   ggplot(aes(.fitted_local, .var_local)) + 
+   geom_point() + 
+   geom_hline(yintercept = 1, linetype = 2) +
+   geom_smooth() + 
+   xlab("fitted values") +
+   ylab("variance")
+
+p11 <- probit_res_pear |>
+   group_by(.fitted_group) |>
+   summarize(.fitted_local = mean(.fitted), .var_local = var(.resid)) |>
+   na.omit() |> 
+   ggplot(aes(.fitted_local, .var_local)) + 
+   geom_point() + 
+   geom_hline(yintercept = 1, linetype = 2) +
+   geom_smooth() + 
+   xlab("fitted values") +
+   ylab("variance")
+
+p12 <- cloglog_res_pear |>
+   group_by(.fitted_group) |>
+   summarize(.fitted_local = mean(.fitted), .var_local = var(.resid)) |>
+   na.omit() |> 
+   ggplot(aes(.fitted_local, .var_local)) + 
+   geom_point() + 
+   geom_hline(yintercept = 1, linetype = 2) +
+   geom_smooth() + 
+   xlab("fitted values") +
+   ylab("variance")
+gridExtra::grid.arrange(p4,p5,p6,p10,p11,p12,ncol = 3)
+
+B <- 8
+p <- list()
+for (b in 1:B) {
+   framingham$y <- simulate(model1_logit)[, 1]
+   sim_glm_tmp <- glm(y ~ SEX + AGE + TOTCHOL + CIGPDAY + BMI + SYSBP + 
+                         PREVSTRK + DIABETES + PREVCHD + HEARTRTE + educ + BPMEDS, 
+                      data = framingham, 
+                      family = binomial(link="logit"))
+   sim_tmp_diag <- augment(sim_glm_tmp, type.residuals = "pearson")
+   p[[b]] <- ggplot(sim_tmp_diag, aes(.fitted, .resid)) +
+   geom_point() +
+   geom_smooth()
+}
+
+
+gridExtra::grid.arrange(p[[1]], p[[2]], p[[3]],p[[4]],p[[5]],p[[6]],p[[7]],p[[8]],ncol = 4)
 
 https://pages.stat.wisc.edu/~ane/st572/notes/lec06.pdf
