@@ -4,40 +4,165 @@ cv <- function(form, data, K = 10) {
   mu_hat <- numeric(n)
   group <- sample(rep(1:K, length.out = n))
   for(i in 1:K) {
-    model <- glm(form, data = data[group != i, ], family = "binomial")
+    model <- glm(form, data = data[group != i, ], family = binomial(link="logit"))
     mu_hat[group == i] <- 
       predict(model, newdata = data[group == i, ], type = "response")
   }
   mu_hat
 }
+deviance <- function(y, p) ifelse(y == 1, -2 * log(p), -2 * log(1 - p))
 auc <- function(y, eta) {
   eta1 <- eta[y == 1]
   eta0 <- eta[y == 0]
   wilcox.test(eta1, eta0)$statistic / (length(eta1) * length(eta0))
 }
-
+### TESTING THE INCLUSION OF THE SKEWED VARIABLES BY CV ###
 form1 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK
-form2 = CVD ~ (SEX + AGE + BMI + CIGPDAY)^2 + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK
-form3 = CVD ~ (SEX + AGE + BMI)*CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD
-form4 = CVD ~ (SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES +PREVSTRK)^2
-
-
-deviance <- function(y, p) ifelse(y == 1, -2 * log(p), -2 * log(1 - p))
-
+form2 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK
+form3 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + PREVSTRK
+form4 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES
+form5 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVSTRK
+form6 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES
+form7 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD
 
 Err <- tibble(
-  model = c("Additive all", "Int S,A,B,C","CIGPDAY INT","Int All"),
+  model = c("Additive all", "ADD - CHD","ADD - dia","Add-STRK","Add only STRK","Add only Dia","Add only CHD"),
   Deviance = c(
     deviance(framingham$CVD, cv(form1, framingham)) |> mean(),
     deviance(framingham$CVD, cv(form2, framingham)) |> mean(),
     deviance(framingham$CVD, cv(form3, framingham)) |> mean(),
-    deviance(framingham$CVD, cv(form4, framingham)) |> mean()
+    deviance(framingham$CVD, cv(form4, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form5, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form6, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form7, framingham)) |> mean()
   ),
   AUC = c(
     auc(framingham$CVD, cv(form1, framingham)), 
     auc(framingham$CVD, cv(form2, framingham)),
     auc(framingham$CVD, cv(form3, framingham)),
-    auc(framingham$CVD, cv(form4, framingham))
+    auc(framingham$CVD, cv(form4, framingham)),
+    auc(framingham$CVD, cv(form5, framingham)),
+    auc(framingham$CVD, cv(form6, framingham)),
+    auc(framingham$CVD, cv(form7, framingham))
   )
 )
 Err
+
+### TESTING INTERACTIONS ####
+form8 = CVD ~ (SEX + AGE + BMI + CIGPDAY)^2 + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK
+form9 = CVD ~ (SEX + AGE + BMI)*CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD
+form10 = CVD ~ (SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES +PREVSTRK)^2
+
+model1 = glm(form1, data=framingham, family=binomial())
+model8 = glm(form8, data=framingham,family=binomial())
+model9 = glm(form9, data=framingham,family=binomial())
+model10 = glm(form10, data=framingham,family=binomial())
+
+set.seed(1045)
+Err2 <- tibble(
+  model = c("Additive All", "Small int","CIGPDAY int","Int All"),
+  Deviance = c(
+    deviance(framingham$CVD, cv(form1, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form8, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form9, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form10, framingham)) |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, cv(form1, framingham)), 
+    auc(framingham$CVD, cv(form8, framingham)),
+    auc(framingham$CVD, cv(form9, framingham)),
+    auc(framingham$CVD, cv(form10, framingham))
+  )
+)
+
+err2 <- tibble(
+  model = c("Add all (train)","Small int (train)","CIGPDAY int (train)", "Int all (train)"),
+  Deviance = c(
+    residuals(model1, type = "deviance")^2 |> mean(),
+    residuals(model8, type = "deviance")^2 |> mean(),
+    residuals(model9, type = "deviance")^2 |> mean(),
+    residuals(model10, type = "deviance")^2 |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, predict(model1)), 
+    auc(framingham$CVD, predict(model8)),
+    auc(framingham$CVD, predict(model9)),
+    auc(framingham$CVD, predict(model10))
+  )
+)
+rbind(err2,Err2)
+
+Compare = data.frame(int = predict(model_int, type="response"),
+                     add = predict(model_add,type="response"))
+### PLOT COMPARING ####
+ggplot(Compare, aes(x=add,y=int))+geom_point()+ geom_smooth()
+
+## Investigate if SPLINES is necessary
+form11 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD +
+  CIGPDAY:SEX + CIGPDAY:AGE +CIGPDAY:ns(BMI,df=2)
+
+form12 = CVD ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + DIABETES + PREVSTRK + PREVCHD +
+  CIGPDAY:SEX + CIGPDAY:AGE+CIGPDAY:ns(BMI,df=3)
+
+model11 = glm(form11, data=framingham, family=binomial())
+model12 = glm(form12, data=framingham,family=binomial())
+
+err3 <- tibble(
+  model = c("No spline (train)","DF=2 (train)","DF=3 (train)"),
+  Deviance = c(
+    residuals(model9, type = "deviance")^2 |> mean(),
+    residuals(model11, type = "deviance")^2 |> mean(),
+    residuals(model12, type = "deviance")^2 |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, predict(model9)),
+    auc(framingham$CVD, predict(model11)),
+    auc(framingham$CVD, predict(model12))
+  )
+)
+set.seed(1045)
+Err3 <- tibble(
+  model = c("No Spline", "DF=2","DF=3"),
+  Deviance = c(
+    deviance(framingham$CVD, cv(form9, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form11, framingham)) |> mean(),
+    deviance(framingham$CVD, cv(form12, framingham)) |> mean()
+  ),
+  AUC = c(
+    auc(framingham$CVD, cv(form3, framingham)), 
+    auc(framingham$CVD, cv(form5, framingham)),
+    auc(framingham$CVD, cv(form6, framingham))
+  )
+)
+rbind(err3,Err3)
+
+#### TRY CAL PLOT ####
+group_p <- function(y, p, n_probs = 50) {
+  tibble(
+    y = y,
+    p = p,
+    p_group = cut(p, quantile(p, probs = seq(0, n_probs, 1) / n_probs), include.lowest = TRUE)
+  ) |>
+    group_by(p_group) |>
+    summarize(
+      p_local = mean(p), 
+      obs_local = mean(y), 
+      n = n(), 
+      se_local = sqrt(p_local * (1 - p_local) / n()),
+    )
+}
+cal_plot <- ggplot(mapping = aes(p_local, obs_local)) + 
+  geom_point() + 
+  geom_line(aes(y = p_local + 1.96 * se_local), color = "red") + 
+  geom_line(aes(y = p_local - 1.96 * se_local), color = "red") +
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_smooth() + 
+  xlab("predicted probability") +
+  ylab("observed probability")
+set.seed(1045)
+p1 <- cal_plot %+% group_p(as.numeric(framingham$CVD)-1, cv(form1, framingham)) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) + ggtitle("Additive model")
+p2 <- cal_plot %+% group_p(as.numeric(framingham$CVD)-1, cv(form9, framingham)) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) + ggtitle("Interaction model")
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+cv(form1,framingham)
