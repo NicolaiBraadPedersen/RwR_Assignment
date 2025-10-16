@@ -1,0 +1,20 @@
+mean(framingham$HEARTRTE)
+mean(framingham$BMI)
+var(framingham$HEARTRTE)
+var(framingham$BMI)
+n=10000
+library(truncnorm)
+set.seed(27)
+X_sim <- cbind(
+  rtruncnorm(n, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+Surv_func = function(gamma_0,beta,X,t){
+  eta = X %*% beta
+  beta_0 = gamma_0*log(t)
+  S = 1/(exp(eta+beta_0)+1)
+  return(S)
+}
+sim_surv = Surv_func(3,c(-0.03,-0.3),X_sim,24)
+range(sim_surv)
+hist(sim_surv)
