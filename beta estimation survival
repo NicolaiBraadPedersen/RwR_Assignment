@@ -1,3 +1,32 @@
+U = runif(1000,0,1)
+
+gamma_0 = 4.4
+
+beta = c(-0.2,-0.02)
+
+eta = X_sim %*% beta
+
+T_star = exp((1/gamma_0)*(log(U/(1-U))-eta))
+
+Y_12 = ifelse(T_star < 12, 1, 0)
+Y_24 = ifelse(T_star < 24, 1, 0)
+Y_36 = ifelse(T_star < 36, 1, 0)
+
+df = data.frame(X_HR = X_sim[,1],
+                X_BMI = X_sim[,2],
+                T_star =T_star,
+                Y_12 = Y_12,
+                Y_24 = Y_24,
+                Y_36 = Y_36)
+
+
+
+fit_12 <- glm(Y_12 ~ X_HR + X_BMI, family = binomial(link = logit), data = df)
+fit_24 <- glm(Y_24 ~ X_HR + X_BMI, family = binomial(link = logit), data = df)
+fit_36 <- glm(Y_36 ~ X_HR + X_BMI, family = binomial(link = logit), data = df)
+
+
+
 n <- 1000
 t_vals <- 10:40
 n_sim <- 100  # number of simulation iterations
