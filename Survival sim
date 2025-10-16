@@ -30,3 +30,10 @@ T_star = function(t){
   return(T_star)
   }
 sum(T_star(24)==0)
+
+df = data.frame(X_HR = X_sim[,1],
+                X_BMI = X_sim[,2],
+                T_star =T_star(100),
+                Y_12 = ifelse(T_star(12)>0,1,0),
+                Y_24 = ifelse(T_star(24)>0,1,0),
+                Y_36 = ifelse(T_star(36)>0,1,0))
