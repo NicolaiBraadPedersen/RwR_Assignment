@@ -32,3 +32,19 @@ df = data.frame(X_HR = X_sim[,1],
                 Y_12 = ifelse(T_star>12,0,1),
                 Y_24 = ifelse(T_star>24,0,1),
                 Y_36 = ifelse(T_star>36,0,1))
+
+
+
+
+#COX fit
+surv_12 <- coxph(Surv(T_star, Y_12) ~ X_HR + X_BMI,
+             data = df)
+surv_24 <- coxph(Surv(T_star, Y_24) ~ X_HR + X_BMI,
+                 data = df)
+surv_36 <- coxph(Surv(T_star, Y_36) ~ X_HR + X_BMI,
+                 data = df)
+
+
+surv_12$coefficients
+surv_24$coefficients
+surv_36$coefficients
