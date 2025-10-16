@@ -18,22 +18,17 @@ Surv_func = function(gamma_0,beta,X,t){
 sim_surv = Surv_func(3,c(-0.03,-0.3),X_sim,24)
 range(sim_surv)
 hist(sim_surv)
-T_star = function(t){
-  T_star = matrix(0,nrow=n,ncol=1)
-  for (i in 1:t){
+T_star = matrix(0,nrow=n,ncol=1)
+for (i in 1:100){
   idx = which(T_star==0)
   if (length(idx)>0){
     p=Surv_func(3,c(-0.03,-0.3),X_sim[idx,],i)
     binom = rbinom(n=length(idx),size=1,prob = p)
     T_star[idx[binom==0]] <- i }
-  }
-  return(T_star)
-  }
-sum(T_star(24)==0)
-
+}
 df = data.frame(X_HR = X_sim[,1],
                 X_BMI = X_sim[,2],
-                T_star =T_star(100),
-                Y_12 = ifelse(T_star(12)>0,1,0),
-                Y_24 = ifelse(T_star(24)>0,1,0),
-                Y_36 = ifelse(T_star(36)>0,1,0))
+                T_star =T_star,
+                Y_12 = ifelse(T_star>12,0,1),
+                Y_24 = ifelse(T_star>24,0,1),
+                Y_36 = ifelse(T_star>36,0,1))
