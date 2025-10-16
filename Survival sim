@@ -18,3 +18,9 @@ Surv_func = function(gamma_0,beta,X,t){
 sim_surv = Surv_func(3,c(-0.03,-0.3),X_sim,24)
 range(sim_surv)
 hist(sim_surv)
+for (i in 1:100){
+  size = n
+  p = Surv_func(3,c(-0.03,-0.3),X_sim,i)
+  binom = rbinom(n=size,prob = p)
+  
+  n =
