@@ -18,17 +18,15 @@ Surv_func = function(gamma_0,beta,X,t){
 sim_surv = Surv_func(3,c(-0.03,-0.3),X_sim,24)
 range(sim_surv)
 hist(sim_surv)
-for (i in 1:100){
-  size = n
-  p = Surv_func(3,c(-0.03,-0.3),X_sim,i)
-  binom = rbinom(n=size,prob = p)
-  
-  n =
-T_star = matrix(0,nrow=n,ncol=1)
-for (i in 1:100){
+T_star = function(t){
+  T_star = matrix(0,nrow=n,ncol=1)
+  for (i in 1:t){
   idx = which(T_star==0)
   if (length(idx)>0){
     p=Surv_func(3,c(-0.03,-0.3),X_sim[idx,],i)
     binom = rbinom(n=length(idx),size=1,prob = p)
     T_star[idx[binom==0]] <- i }
-}
+  }
+  return(T_star)
+  }
+sum(T_star(24)==0)
