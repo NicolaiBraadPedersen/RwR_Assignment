@@ -1,0 +1,131 @@
+########################## visualize mean structure for specific choice of people to T* and t=10:40 ###################################
+n <- 1000
+t_vals <- 10:40
+n_sim <- 100  # number of simulation iterations
+
+X_sim <- cbind(
+  rtruncnorm(n, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+
+# Create storage matrices
+coef_intercept <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR        <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI       <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+colnames(coef_intercept) <- colnames(coef_HR) <- colnames(coef_BMI) <- paste0("t", t_vals)
+
+# Start simulation loop
+for (sim in 1:n_sim) {
+  
+  
+  U = runif(n, 0, 1)
+  gamma_0 = 4.4
+  beta = c(-0.2, -0.02)
+  eta = X_sim %*% beta
+  T_star = exp((1 / gamma_0) * (log(U / (1 - U)) - eta))
+  
+  df = data.frame(X_HR = X_sim[,1],
+                  X_BMI = X_sim[,2],
+                  T_star = T_star)
+  
+  # Fit logistic regressions for each t
+  for (i in seq_along(t_vals)) {
+    t <- t_vals[i]
+    df$Y_t <- ifelse(df$T_star < t, 1, 0)
+    fit_t <- glm(Y_t ~ X_HR + X_BMI, family = binomial(link = "logit"), data = df)
+    coefs <- coef(fit_t)
+    coef_intercept[sim, i] <- coefs[1]
+    coef_HR[sim, i]        <- coefs[2]
+    coef_BMI[sim, i]       <- coefs[3]
+  }
+}
+
+plot_beta_sim <- function(df, beta_theo){
+Beta_0_df <- as.data.frame(df) %>%
+  mutate(sample = row_number()) %>%
+  pivot_longer(
+    cols = starts_with("t"),
+    names_to = "time",
+    values_to = "value"
+  ) %>%
+  mutate(time = as.numeric(str_remove(time, "^t")))
+
+# --- Summary statistics ---
+summary_beta_0 <- Beta_0_df %>%
+  group_by(time) %>%
+  summarise(mean = mean(value), sd = sd(value), .groups = "drop")
+  
+# --- Plot ---
+p_beta_0 <- ggplot() +
+  geom_point(data = Beta_0_df, aes(x = time, y = value), alpha = 0.3) +
+  geom_ribbon(data = summary_beta_0,
+              aes(x = time, ymin = mean - sd, ymax = mean + sd),
+              fill = "skyblue", alpha = 0.3) +
+  geom_smooth(data = summary_beta_0, aes(x=time,y=mean),
+            color = "blue", size = 1.2, linestyle = 2) +
+  geom_hline(aes(yintercept = beta_theo),
+            color = "red", size = 1.2) +
+  theme_minimal() +
+  labs(
+    title = expression(beta[0]~" vs. time with fitted log curve"),
+    x = "Time", y = expression(beta[0])
+  )
+
+p_beta_0
+}
+
+plot_beta_int_sim <- function(df, gamma){
+Beta_0_df <- as.data.frame(df) %>%
+  mutate(sample = row_number()) %>%
+  pivot_longer(
+    cols = starts_with("t"),
+    names_to = "time",
+    values_to = "value"
+  ) %>%
+  mutate(time = as.numeric(str_remove(time, "^t")))
+
+# --- Summary statistics ---
+summary_beta_0 <- Beta_0_df %>%
+  group_by(time) %>%
+  summarise(mean = mean(value), sd = sd(value), .groups = "drop")
+
+# --- Log curve (200 points between 10 and 40) ---
+curve_df <- tibble(
+  x = seq(10, 40, length.out = 200),
+  y = gamma * log(x)
+)
+
+# --- Plot ---
+p_beta_0 <- ggplot() +
+  geom_point(data = Beta_0_df, aes(x = time, y = value), alpha = 0.3) +
+  geom_ribbon(data = summary_beta_0,
+              aes(x = time, ymin = mean - sd, ymax = mean + sd),
+              fill = "skyblue", alpha = 0.3) +
+  geom_smooth(data = curve_df, aes(x=x,y=y),
+            color = "red", size = 1.2) +
+  geom_smooth(data = summary_beta_0, aes(x=time,y=mean),
+            color = "blue", size = 1.2, linestyle = 2) +
+  theme_minimal() +
+  labs(
+    title = expression(beta[0]~" vs. time with fitted log curve"),
+    x = "Time", y = expression(beta[0])
+  )
+
+p_beta_0
+}
+#name = {0,1,2} for intercept + 2 variables 
+beta_var_sim <- function(t_vals, n, n_rep, name){
+  for (i in (1:n_rep)){
+    beta_sim(n, t:vals, name)
+  }
+}
+
+########################## visualize mean structure for specific choice of people to T* and t=10:40 ###################################
+
+plot_beta_sim(coef_HR, -0.2)
+plot_beta_sim(coef_BMI, -0.02)
+plot_beta_int_sim(coef_intercept, 4.4)
+
+########################## visualize and variance structure for different choice of people to T* and t=1:20 ###################################
+
