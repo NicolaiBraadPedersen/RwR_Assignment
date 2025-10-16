@@ -39,3 +39,52 @@ for (sim in 1:n_sim) {
 coef_intercept
 coef_HR
 coef_BMI
+
+#coxph survival model 
+
+# Simulation settings
+n <- 1000
+t_vals <- 10:40
+n_sim <- 100  # number of simulation iterations
+
+# Create storage matrices
+coef_HR_surv  <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_surv <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+colnames(coef_HR_surv) <- colnames(coef_BMI_surv) <- paste0("t", t_vals)
+
+# Start simulation loop
+for (sim in 1:n_sim) {
+  
+ 
+  # Simulate survival times
+  U = runif(n, 0, 1)
+  gamma_0 = 4.4
+  beta = c(-0.2, -0.02)
+  eta = X_sim %*% beta
+  T_star = exp((1 / gamma_0) * (log(U / (1 - U)) - eta))
+  
+  # Build data frame
+  df = data.frame(
+    X_HR = X_sim[,1],
+    X_BMI = X_sim[,2],
+    T_star = T_star
+  )
+  
+  # Fit Cox regressions for each t
+  for (i in seq_along(t_vals)) {
+    t <- t_vals[i]
+    df$Y_t <- ifelse(df$T_star < t, 1, 0)
+    fit_t <- coxph(Surv(T_star, Y_t) ~ X_HR + X_BMI, data = df)
+    coefs <- coef(fit_t)
+    coef_HR_surv[sim, i]  <- coefs["X_HR"]
+    coef_BMI_surv[sim, i] <- coefs["X_BMI"]
+  }
+}
+
+# Results: 2 matrices
+coef_HR_surv
+coef_BMI_surv
+
+
+
