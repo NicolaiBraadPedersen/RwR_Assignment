@@ -24,3 +24,11 @@ for (i in 1:100){
   binom = rbinom(n=size,prob = p)
   
   n =
+T_star = matrix(0,nrow=n,ncol=1)
+for (i in 1:100){
+  idx = which(T_star==0)
+  if (length(idx)>0){
+    p=Surv_func(3,c(-0.03,-0.3),X_sim[idx,],i)
+    binom = rbinom(n=length(idx),size=1,prob = p)
+    T_star[idx[binom==0]] <- i }
+}
