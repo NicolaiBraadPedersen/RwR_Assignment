@@ -18,3 +18,21 @@ ggplot(surv_plot, aes(x = 0, xend = T, y = id, yend = id)) +
   scale_color_manual(values = c("CVD" = "steelblue", "Censored" = "red")) +
   labs(x = "Time (days)", y = "Patient", color = "Status") +
   theme_minimal()
+
+
+sim_data = data.frame(BMI = X_sim[,2], U=runif(n))
+df_C_star = sim_data %>% mutate(C_star = ifelse(BMI>18.5 & BMI<30,
+                                                1/0.03 *sqrt(-log(1-U)),
+                                                1/0.06*sqrt(-log(1-U))))
+Y_death = ifelse(T_star < df_C_star$C_star, 1, 0)
+summary(Y_death)
+sum(Y_death==1)
+
+df_death = data.frame(X_HR = X_sim[,1],
+                      X_BMI=X_sim[,2],
+                      T_star=T_star,
+                      C_star=df_C_star$C_star,
+                      Y = Y_death
+                      )
+
+model_death <- glm(Y ~ X_HR + X_BMI, family = binomial(link = logit), data = df_death)
