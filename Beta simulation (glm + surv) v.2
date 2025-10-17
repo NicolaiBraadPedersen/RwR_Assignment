@@ -1,4 +1,4 @@
-########################## visualize mean structure for specific choice of people to T* and t=10:40 ###################################
+########################## visualize mean and variance structureof beta, for specific choice of people to T* and t=10:40 ###################################
 n <- 1000
 t_vals <- 10:40
 n_sim <- 100  # number of simulation iterations
@@ -61,16 +61,22 @@ p_beta_0 <- ggplot() +
   geom_point(data = Beta_0_df, aes(x = time, y = value), alpha = 0.3) +
   geom_ribbon(data = summary_beta_0,
               aes(x = time, ymin = mean - sd, ymax = mean + sd),
-              fill = "skyblue", alpha = 0.3) +
+              fill = "#bf812d", alpha = 0.3) +
   geom_smooth(data = summary_beta_0, aes(x=time,y=mean),
-            color = "blue", size = 1.2, linestyle = 2) +
-  geom_hline(aes(yintercept = beta_theo),
-            color = "red", size = 1.2) +
+            color = "#bf812d", size = 1.2) +
+  geom_hline(aes(yintercept = beta_theo), linetype = "dashed",
+            color = "#35978f", size = 1.2) +
   theme_minimal() +
   labs(
     title = expression(beta[0]~" vs. time with fitted log curve"),
     x = "Time", y = expression(beta[0])
-  )
+  ) +
+  theme(
+    plot.background  = element_rect(fill = "#e6e6e6", color = NA),
+    panel.background = element_rect(fill = "#e6e6e6", color = NA),
+    legend.background = element_rect(fill = "#e6e6e6", color = NA),
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    panel.grid.minor = element_line(color = "white", size = 0.2) )
 
 p_beta_0
 }
@@ -101,16 +107,22 @@ p_beta_0 <- ggplot() +
   geom_point(data = Beta_0_df, aes(x = time, y = value), alpha = 0.3) +
   geom_ribbon(data = summary_beta_0,
               aes(x = time, ymin = mean - sd, ymax = mean + sd),
-              fill = "skyblue", alpha = 0.3) +
-  geom_smooth(data = curve_df, aes(x=x,y=y),
-            color = "red", size = 1.2) +
+              fill = "#bf812d", alpha = 0.3) +
   geom_smooth(data = summary_beta_0, aes(x=time,y=mean),
-            color = "blue", size = 1.2, linestyle = 2) +
+            color = "#bf812d", size = 1.2) +
+  geom_smooth(data = curve_df, aes(x=x,y=y),
+            fcolor = "#35978f", size = 1.2, linetype = "dashed") +
   theme_minimal() +
   labs(
     title = expression(beta[0]~" vs. time with fitted log curve"),
     x = "Time", y = expression(beta[0])
-  )
+  ) +
+  theme(
+    plot.background  = element_rect(fill = "#e6e6e6", color = NA),
+    panel.background = element_rect(fill = "#e6e6e6", color = NA),
+    legend.background = element_rect(fill = "#e6e6e6", color = NA),
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    panel.grid.minor = element_line(color = "white", size = 0.2) )
 
 p_beta_0
 }
@@ -121,11 +133,254 @@ beta_var_sim <- function(t_vals, n, n_rep, name){
   }
 }
 
-########################## visualize mean structure for specific choice of people to T* and t=10:40 ###################################
-
 plot_beta_sim(coef_HR, -0.2)
 plot_beta_sim(coef_BMI, -0.02)
 plot_beta_int_sim(coef_intercept, 4.4)
 
-########################## visualize and variance structure for different choice of people to T* and t=1:20 ###################################
+########################## visualize mean and variance structure of beta, for different choice of people to T* and t=5:25 ###################################
+set.seed(27)
+n1 <- 500
+n2 <- 2500
+n3 <- 10000
+t_vals <- 5:25
+n_sim <- 100  # number of simulation iterations
 
+X_sim_1 <- cbind(
+  rtruncnorm(n1, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n1, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+X_sim_2 <- cbind(
+  rtruncnorm(n2, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n2, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+X_sim_3 <- cbind(
+  rtruncnorm(n3, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n3, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+
+# Create storage matrices
+coef_intercept_mean_1 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_intercept_mean_2 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_intercept_mean_3 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_intercept_sd_1   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_intercept_sd_2   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_intercept_sd_3   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+coef_HR_mean_1 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_mean_2 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_mean_3 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_sd_1   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_sd_2   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_sd_3   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+coef_BMI_mean_1 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_mean_2 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_mean_3 <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_sd_1   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_sd_2   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_sd_3   <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+coef_intercept_mean_1_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_intercept_mean_2_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_intercept_mean_3_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_intercept_sd_1_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_intercept_sd_2_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_intercept_sd_3_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+
+coef_HR_mean_1_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_HR_mean_2_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_HR_mean_3_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_HR_sd_1_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_HR_sd_2_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_HR_sd_3_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+
+coef_BMI_mean_1_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_BMI_mean_2_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_BMI_mean_3_ <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_BMI_sd_1_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_BMI_sd_2_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+coef_BMI_sd_3_   <- matrix(NA, nrow = 1, ncol = length(t_vals))
+
+# Start simulation loop
+for (sim in 1:n_sim) {
+  
+  
+  U1 = runif(n1, 0, 1)
+  U2 = runif(n2, 0, 1)
+  U3 = runif(n3, 0, 1)
+  
+  gamma_0 = 4.4
+  beta = c(-0.2, -0.02)
+  
+  eta1 = X_sim_1 %*% beta
+  eta2 = X_sim_2 %*% beta
+  eta3 = X_sim_3 %*% beta
+  
+  T_star1 = exp((1 / gamma_0) * (log(U1 / (1 - U1)) - eta1))
+  T_star2 = exp((1 / gamma_0) * (log(U2 / (1 - U2)) - eta2))
+  T_star3 = exp((1 / gamma_0) * (log(U3 / (1 - U3)) - eta3))
+  
+  df1 = data.frame(X_HR = X_sim_1[,1],
+                   X_BMI = X_sim_1[,2],
+                   T_star = T_star1)
+  df2 = data.frame(X_HR = X_sim_2[,1],
+                   X_BMI = X_sim_2[,2],
+                   T_star = T_star2)
+  df3 = data.frame(X_HR = X_sim_3[,1],
+                   X_BMI = X_sim_3[,2],
+                   T_star = T_star3)
+  
+  # Fit logistic regressions for each t
+  for (i in seq_along(t_vals)) {
+    t <- t_vals[i]
+    df1$Y_t <- ifelse(df1$T_star < t, 1, 0)
+    df2$Y_t <- ifelse(df2$T_star < t, 1, 0)
+    df3$Y_t <- ifelse(df3$T_star < t, 1, 0)
+    
+    fit_t1 <- glm(Y_t ~ X_HR + X_BMI, family = binomial(link = "logit"), data = df1)
+    fit_t2 <- glm(Y_t ~ X_HR + X_BMI, family = binomial(link = "logit"), data = df2)
+    fit_t3 <- glm(Y_t ~ X_HR + X_BMI, family = binomial(link = "logit"), data = df3)
+    
+    coefs1 <- coef(fit_t1)
+    coefs2 <- coef(fit_t2)
+    coefs3 <- coef(fit_t3)
+    
+    coef_intercept_mean_1[sim, i] <- (coefs1[1])
+    coef_intercept_mean_2[sim, i] <- (coefs2[1])
+    coef_intercept_mean_3[sim, i] <- (coefs3[1])
+    coef_intercept_sd_1[sim, i] <- (coefs1[1])
+    coef_intercept_sd_2[sim, i] <- (coefs2[1])
+    coef_intercept_sd_3[sim, i] <- (coefs3[1])
+    
+    coef_HR_mean_1[sim, i] <- (coefs1[2])
+    coef_HR_mean_2[sim, i] <- (coefs2[2])
+    coef_HR_mean_3[sim, i] <- (coefs3[2])
+    coef_HR_sd_1[sim, i] <- (coefs1[2])
+    coef_HR_sd_2[sim, i] <- (coefs2[2])
+    coef_HR_sd_3[sim, i] <- (coefs3[2])
+    
+    coef_BMI_mean_1[sim, i] <- (coefs1[3])
+    coef_BMI_mean_2[sim, i] <- (coefs2[3])
+    coef_BMI_mean_3[sim, i] <- (coefs3[3])
+    coef_BMI_sd_1[sim, i] <- (coefs1[3])
+    coef_BMI_sd_2[sim, i] <- (coefs2[3])
+    coef_BMI_sd_3[sim, i] <- (coefs3[3])
+  }
+}
+for (i in seq_along(t_vals)) {
+  coef_intercept_mean_1_[, i] <- mean(coef_intercept_mean_1[,i])
+  coef_intercept_mean_2_[, i] <- mean(coef_intercept_mean_2[,i])
+  coef_intercept_mean_3_[, i] <- mean(coef_intercept_mean_3[,i])
+  coef_intercept_sd_1_[, i] <- sd(coef_intercept_sd_1[,i])
+  coef_intercept_sd_2_[, i] <- sd(coef_intercept_sd_2[,i])
+  coef_intercept_sd_3_[, i] <- sd(coef_intercept_sd_3[,i])
+  
+  coef_HR_mean_1_[, i] <- mean(coef_HR_mean_1[, i])
+  coef_HR_mean_2_[, i] <- mean(coef_HR_mean_2[, i])
+  coef_HR_mean_3_[, i] <- mean(coef_HR_mean_3[, i])
+  coef_HR_sd_1_[, i] <- sd(coef_HR_sd_1[, i])
+  coef_HR_sd_2_[, i] <- sd(coef_HR_sd_2[, i])
+  coef_HR_sd_3_[, i] <- sd(coef_HR_sd_3[, i])
+  
+  coef_BMI_mean_1_[, i] <- mean(coef_BMI_mean_1[, i])
+  coef_BMI_mean_2_[, i] <- mean(coef_BMI_mean_2[, i])
+  coef_BMI_mean_3_[, i] <- mean(coef_BMI_mean_3[, i])
+  coef_BMI_sd_1_[, i] <- sd(coef_BMI_sd_1[, i])
+  coef_BMI_sd_2_[, i] <- sd(coef_BMI_sd_2[, i])
+  coef_BMI_sd_3_[, i] <- sd(coef_BMI_sd_3[, i])
+  }
+
+
+df_mean <- data.frame(
+  i = 1:ncol(coef_intercept_mean_1),
+  intercept_500 = as.numeric(coef_intercept_mean_1_),
+  intercept_2500 = as.numeric(coef_intercept_mean_2_),
+  intercept_10000 = as.numeric(coef_intercept_mean_3_),
+  HR_500 = as.numeric(coef_HR_mean_1_),
+  HR_2500 = as.numeric(coef_HR_mean_2_),
+  HR_10000 = as.numeric(coef_HR_mean_3_),
+  BMI_500 = as.numeric(coef_BMI_mean_1_),
+  BMI_2500 = as.numeric(coef_BMI_mean_2_),
+  BMI_10000 = as.numeric(coef_BMI_mean_3_)
+)
+
+df_long_mean <- df_mean %>%
+  pivot_longer(
+    cols = -i,
+    names_to = c("coef", "model"),
+    names_sep = "_",
+    values_to = "value"
+  )
+
+ref_lines <- data.frame(
+  coef = c("BMI", "HR"),
+  yintercept = c(-0.02, -0.2)
+)
+
+fun_df <- data.frame(
+  i = 1:max(df_long$i),
+  value = 4.4 * log(1:max(df_long$i)),
+  coef = "intercept"
+)
+
+ggplot(df_long_mean, aes(x = i+5, y = value, color = model, linetype = model)) +
+  geom_line(size = 1) +
+  facet_wrap(~ coef, scales = "free_y") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Coefficient means over iterations",
+    x = "Iteration (i)",
+    y = "Coefficient mean",
+    color = "N",
+    linetype = "N"
+  ) +
+  geom_hline(
+    data = ref_lines,
+    aes(yintercept = yintercept),
+    color = "black",
+    linetype = "dashed",
+    linewidth = 0.8
+  ) + geom_line(
+    data = fun_df,
+    aes(x = i, y = value),
+    color = "black",
+    linetype = "dotted",
+    linewidth = 1
+  )
+  
+  
+  
+  
+
+df_sd <- data.frame(
+  i = 1:ncol(coef_intercept_mean_1),
+  intercept_500 = as.numeric(coef_intercept_sd_1_),
+  intercept_2500 = as.numeric(coef_intercept_sd_2_),
+  intercept_10000 = as.numeric(coef_intercept_sd_3_),
+  HR_500 = as.numeric(coef_HR_sd_1_),
+  HR_2500 = as.numeric(coef_HR_sd_2_),
+  HR_10000 = as.numeric(coef_HR_sd_3_),
+  BMI_500 = as.numeric(coef_BMI_sd_1_),
+  BMI_2500 = as.numeric(coef_BMI_sd_2_),
+  BMI_10000 = as.numeric(coef_BMI_sd_3_)
+)
+
+df_long_sd <- df_sd %>%
+  pivot_longer(
+    cols = -i,
+    names_to = c("coef", "model"),
+    names_sep = "_",
+    values_to = "value"
+  )
+
+ggplot(df_long_sd, aes(x = i+5, y = value, color = model, linetype = model)) +
+  geom_line(size = 1) +
+  facet_wrap(~ coef, scales = "free_y") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Coefficient sd over iterations",
+    x = "Iteration (i)",
+    y = "Coefficient sd",
+    color = "N",
+    linetype = "N"
+  ) + scale_y_log10()
