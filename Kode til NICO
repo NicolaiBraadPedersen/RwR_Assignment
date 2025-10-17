@@ -38,3 +38,65 @@ for (sim in 1:n_sim) {
     coef_BMI_surv[sim, i]       <- -1/scale *coefs[3]
   }
 }
+
+model_surv_add <- survreg(
+  Surv(TIMECVD+0.5,(as.numeric(CVD)-1)) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK + HEARTRTE , 
+  data = framingham, dist="loglogistic")
+
+summary(model_surv_add)
+log(8766)-16.26
+
+
+model_surv_int <- survreg(
+  Surv(TIMECVD+0.01,as.numeric(CVD)-1) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + 
+    PREVSTRK + HEARTRTE + SEX:AGE + SEX:CIGPDAY + SEX:HEARTRTE + AGE:CIGPDAY + AGE:HEARTRTE + 
+    BMI:CIGPDAY,
+  data = framingham, dist="loglogistic")
+int_res = augment(model_surv_int,type.predict="expected")
+int_
+ggplot(int_res,aes(x=.fitted,y=.resid))+geom_point()+geom_smooth()
+summary(model_surv_int)
+log(8766)-18.30
+
+hist(residuals(model_surv_int))
+sum(fitted(model_surv_add)>8766)
+p1 <- augment(model_surv_int, data = framingham, type.predict = "expected") |>
+  survfit(Surv(.fitted, CVD) ~ 1, data = _) |>
+  summary(data.frame = TRUE) |>
+  ggplot(aes(time, cumhaz)) + 
+  geom_abline(slope = 1, color = "blue") +
+  ylim(1,-4000)+
+  geom_point() +
+  xlab("Cox-Snell residuals") + 
+  ylab("Cumulative hazard")
+p1
+
+p2 <- augment(model_surv_add) |> 
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.4) + 
+  geom_smooth() + 
+  ylim(-4000,1)+
+  xlim(0,8766)+
+  xlab("Fitted values") +
+  ylab("Martingale residuals")
+p2
+gridExtra::grid.arrange( p2, ncol = 2)
+
+
+augment(model_surv_int, data = framingham) |> 
+  ggplot(aes(SEX, .resid)) + 
+  ggbeeswarm::geom_beeswarm(alpha = 0.4) + 
+  geom_point(
+    stat = "summary", 
+    fun = mean, 
+    color = "blue", 
+    size = 2.5
+  ) +
+  geom_errorbar(
+    stat = "summary", 
+    fun.data = mean_se, 
+    fun.args = list(mult = 1.96),
+    color = "blue", 
+    width = 0.15, 
+    linewidth = 0.7
+  )
