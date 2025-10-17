@@ -1,0 +1,57 @@
+
+model_surv_add <- coxph(
+  Surv(TIMECVD+0.5,(as.numeric(CVD)-1)) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK + HEARTRTE , 
+  data = framingham)
+
+summary(model_surv_add)
+log(8766)-16.26
+
+predict(model_surv_add,type)
+model_surv_int <- coxph(
+  Surv(TIMECVD+0.01,as.numeric(CVD)-1) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + 
+    PREVSTRK + HEARTRTE + SEX:AGE + SEX:CIGPDAY + SEX:HEARTRTE + AGE:CIGPDAY + AGE:HEARTRTE + 
+    BMI:CIGPDAY,
+  data = framingham)
+
+int_res = augment(model_surv_int,type.predict="expected")
+int_
+ggplot(int_res,aes(x=.fitted,y=.resid))+geom_point()+geom_smooth()
+summary(model_surv_int)
+log(8766)-18.30
+
+
+
+
+p1 <- augment(model_surv_add, data = framingham,type.predict = "expected") |>
+  survfit(Surv(.fitted, as.numeric(CVD)-1) ~ 1, data = _) |>
+  summary(data.frame = TRUE) |>
+  ggplot(aes(time, cumhaz)) + 
+  geom_abline(slope = 1, color = "blue") +
+  geom_point() +
+  xlab("Cox-Snell residuals") + 
+  ylab("Cumulative hazard")
+
+p2 <- augment(model_surv_add) |> 
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.4) + 
+  geom_smooth() + 
+  xlab("Fitted values") +
+  ylab("Martingale residuals")
+
+p3 <- augment(model_surv_int, data = framingham,type.predict = "expected") |>
+  survfit(Surv(.fitted, as.numeric(CVD)-1) ~ 1, data = _) |>
+  summary(data.frame = TRUE) |>
+  ggplot(aes(time, cumhaz)) + 
+  geom_abline(slope = 1, color = "blue") +
+  geom_point() +
+  xlab("Cox-Snell residuals") + 
+  ylab("Cumulative hazard")
+
+p4 <- augment(model_surv_int) |> 
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.4) + 
+  geom_smooth() + 
+  xlab("Fitted values") +
+  ylab("Martingale residuals")
+
+gridExtra::grid.arrange(p1, p2,p3,p4 ,ncol = 2)
