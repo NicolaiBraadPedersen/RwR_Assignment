@@ -1,0 +1,40 @@
+n <- 1000
+t_vals <- 10:40
+n_sim <- 100  # number of simulation iterations
+
+X_sim <- cbind(
+  rtruncnorm(n, a=44,b=143, mean = 75, sd = sqrt(150)),
+  rtruncnorm(n, a=15,b=56,mean = 25, sd = sqrt(16))
+)
+
+# Create storage matrices
+coef_intercept_surv <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_HR_surv        <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+coef_BMI_surv       <- matrix(NA, nrow = n_sim, ncol = length(t_vals))
+
+colnames(coef_intercept_surv) <- colnames(coef_HR_surv) <- colnames(coef_BMI_surv) <- paste0("t", t_vals)
+
+# Start simulation loop
+for (sim in 1:n_sim) {
+  U = runif(n, 0, 1)
+  gamma_0 = 4.4
+  beta = c(-0.2, -0.02)
+  eta = X_sim %*% beta
+  T_star = exp((1 / gamma_0) * (log(U / (1 - U)) - eta))
+  df = data.frame(X_HR = X_sim[,1],
+                  X_BMI = X_sim[,2],
+                  T_star = T_star)
+  # Fit logistic regressions for each t
+  for (i in seq_along(t_vals)) {
+    t <- t_vals[i]
+    df$Y_t <- ifelse(df$T_star < t, 1, 0)
+    model_Y_surv <- survreg(
+      Surv(T_star,Y_t) ~ X_HR+X_BMI, 
+      data = df, dist="loglogistic")
+    coefs <- coef(model_Y_surv)
+    scale <- model_Y_surv$scale
+    coef_intercept_surv[sim, i] <- 1/scale *(log(i)-coefs[1])
+    coef_HR_surv[sim, i]        <- -1/scale *coefs[2]
+    coef_BMI_surv[sim, i]       <- -1/scale *coefs[3]
+  }
+}
