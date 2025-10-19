@@ -1,0 +1,33 @@
+##Probability plot for CVD based on survival
+model_surv_add <- coxph(Surv(TIMECVD+0.5,(as.numeric(CVD)-1)) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES + PREVSTRK + HEARTRTE , 
+  data = framingham)
+
+
+model_surv_int <- coxph(
+  Surv(TIMECVD+0.01,as.numeric(CVD)-1) ~ SEX + AGE + BMI + CIGPDAY + SYSBP + TOTCHOL + PREVCHD + DIABETES +
+    PREVSTRK + HEARTRTE + SEX:AGE + SEX:CIGPDAY + SEX:HEARTRTE + AGE:CIGPDAY + AGE:HEARTRTE +
+    BMI:CIGPDAY,
+  data = framingham)
+
+df1 <- broom::tidy(survfit(model_surv_add)) %>%
+  mutate(model = "Additive")
+
+df2 <- broom::tidy(survfit(model_surv_int)) %>%
+  mutate(model = "Interaction")
+
+# Combine
+df_all <- bind_rows(df1, df2)
+
+# Plot both on same axes
+ggplot(df_all, aes(time, estimate, color = model)) +
+  geom_step() +
+  xlim(0, 9000) +
+  ylim(0.4, 1) +
+  labs(
+    x = "Time (days)",
+    y = "Survival probability",
+    color = "Model"
+  ) +
+  theme(legend.position = "top")
+
+
